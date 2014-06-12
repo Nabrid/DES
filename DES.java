@@ -38,6 +38,15 @@ public class DESalgo {
 	        46, 42, 50, 36, 29, 32
 		};
 		
+		 /**Subkey Rotations
+         	* Defines the number of left shifts either by 1 or 2
+         	*/
+
+        	private static final byte[] rotations =  {
+            		1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1
+        	};
+        
+		
 	} //end of main
 	
 }//end of class DESalgo
