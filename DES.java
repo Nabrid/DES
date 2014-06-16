@@ -176,15 +176,38 @@ public class DESalgo {
 		
 	}
 	
+	//Creates an array for the binary values
+	private static void assignValues(String bin) {
+		int i=0;
+		char ch;
+		String str;
+		//System.out.println(bin + " " + count++);
+		while(i<bin.length()){
+			ch = bin.charAt(i++);
+			str = Character.toString(ch);
+			//System.out.println(str);
+			byte dec = Byte.parseByte(str);
+			//System.out.println(dec + " " + count++);
+			msgInBin[count++] = dec;
+		}
+		
+	}
+	
 	//Converts the hex characters to corresponding binary digits
 	private static void toBinary(String hex) {
-		int i = 0;
+	int i = 0;
 		char ch;
+		String str;
 				
 		hex = hex.toLowerCase();
+		
 		while(i<hex.length()) {
 			ch = hex.charAt(i++);
-			TextIO.put(p + " ");
+			str = Character.toString(ch);
+			int decimal = Integer.parseInt(str,16);
+			String binary = Integer.toBinaryString(0x10 | decimal).substring(1);
+			//TextIO.put(binary + " ");
+			assignValues(binary);
 		}			
 	}
 	
