@@ -170,11 +170,33 @@ public class DESalgo {
             19, 13, 30, 6,
             22, 11, 4,  25
         };
+
+    	public static byte[] msgInBin = new byte[64];
+	public static byte[] keyInBin = new byte[64];
+	public static byte[] alias = new byte[64];
+	public static byte[] keyPC1 = new byte[56];
+	public static byte[] msgIP = new byte[64];
+	public static byte[][][] subKey = new byte[2][17][28]; 
+	public static byte[][] keysCD = new byte[16][56];
+	public static byte[][] keyPC2 = new byte[16][48];
+	public static byte count=0;  	
     	
-    	
-    	private static void permute() {
-		
+        //Reduce the 64 bit key to 56 bit
+	private static void permuteKey64(byte[] PC1, byte[] keyInBin) {
+		for(int i = 0; i < 56; i++) {
+			byte temp = PC1[i];
+			keyPC1[i] = keyInBin[temp-1];
+		}
 	}
+	
+	//Reshuffle the bits in data block using Initial Permutation
+	private static void permuteMsg64(byte[] IP, byte[] msgInBin) {
+		for(int i = 0; i < 64; i++) {
+			byte temp = IP[i];
+			msgIP[i] = msgInBin[temp-1];
+		}
+	}
+
 	
 	//Creates an array for the binary values
 	private static void assignValues(String bin) {
@@ -243,7 +265,49 @@ public class DESalgo {
 		}
 		return b;
 	}
+	
+       //Rotations of the keys
+	private static void rotKeys() {
 		
+		for(int i = 0; i < 2; i++) {
+			for(int j = 1; j < 17; j++) {
+				byte temp = 0, temp1 = 0, temp2 = 0;
+				for(int k = 0; k < 27; k++) {
+					if(rotations[j-1] == 1){
+						if(k == 0) {
+							temp = subKey[i][j-1][0];
+						}
+						subKey[i][j][k] = subKey[i][j-1][k+1];
+						if(k == 26) {
+							subKey[i][j][27] = temp;
+						}
+					}
+					else{
+						if(k == 0) {
+							temp1 = subKey[i][j-1][0];
+							temp2 = subKey[i][j-1][1];
+						}
+						if(k != 26)
+							subKey[i][j][k] = subKey[i][j-1][k+2];
+						else {
+							subKey[i][j][26] = temp1;
+							subKey[i][j][27] = temp2;
+						}							
+					}
+				}
+			}
+		}
+	}
+	
+	//Reduce the keys to 48 bits
+	public static void permuteKey48() {
+		for(int i = 0; i < 16; i++)
+			for(int j = 0; j < 48; j++) {
+				byte temp = PC2[j];
+				keyPC2[i][j] = keysCD[i][temp-1];
+			}
+	}	
+
 	public static void main(String[] args) {
 		
 		TextIO.putln("DES Algorithm Implementation\n");
@@ -252,8 +316,74 @@ public class DESalgo {
 		msg = getInput("message");
 		key = getInput("key");
 		
+
 		toBinary(msg);
+		System.arraycopy(alias, 0, msgInBin, 0, alias.length);
+		count = 0;
 		toBinary(key);
+		System.arraycopy(alias, 0, keyInBin, 0, alias.length);
+		
+		permuteKey64(PC1, keyInBin);
+		permuteMsg64(IP, msgInBin);
+		/*for(int i = 0; i < 64; i++){
+    		System.out.print(msgInBin[i] + " ");
+    	}
+		System.out.println();
+		for(int i = 0; i < 64; i++){
+    		System.out.print(keyInBin[i] + " ");
+    	}
+		System.out.println();
+		for(int i = 0; i < 64; i++){
+    		System.out.print(msgIP[i] + " ");
+    	}
+		for(int i = 0; i < 56; i++) {
+			System.out.print(keyPC1[i] + " ");
+		}*/
+		System.out.println();
+		for(int i = 0; i < 28; i++) {
+			subKey[0][0][i] = keyPC1[i];
+			subKey[1][0][i] = keyPC1[i+28];
+		}
+
+		System.out.println();
+		rotKeys();
+		/*for(int i = 0; i < 2; i++) {
+			for(int j = 0; j < 17; j++) {
+				for(int k = 0; k < 28; k++) {
+					System.out.print(subKey[i][j][k] + " ");
+				}
+				System.out.println();
+			}
+			System.out.println();
+		}*/
+		
+		System.out.println();
+		for(int i = 0; i < 16; i++) {
+			for(int k = 0; k < 56; k++) {
+				int x;
+				x = k % 28;
+				if(k < 28)
+					keysCD[i][k] = subKey[0][i+1][k];
+				else 
+					keysCD[i][k] = subKey[1][i+1][x];
+			}
+		}
+		
+		for(int j = 0; j < 16; j++) {
+			for(int k = 0; k < 56; k++) {
+				System.out.print(keysCD[j][k]);
+			}
+			System.out.println();
+		}
+		System.out.println();
+		permuteKey48();
+		for(int j = 0; j < 16; j++) {
+			System.out.print("K" + j+1 + "\t");
+			for(int k = 0; k < 48; k++) {
+				System.out.print(keyPC2[j][k]);
+			}
+			System.out.println();
+		}
 		
 	} //end of main
 	
