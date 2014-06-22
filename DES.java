@@ -179,8 +179,11 @@ public class DESalgo {
 	public static byte[][][] subKey = new byte[2][17][28]; 
 	public static byte[][] keysCD = new byte[16][56];
 	public static byte[][] keyPC2 = new byte[16][48];
-	public static byte count=0;  	
-    	
+	public static byte[][] msgE = new byte[16][48];
+	public static byte count=0;
+	//public static byte[][] msgIPL = new byte[16][32];
+	public static byte[][] msgIPR = new byte[17][32];
+	
         //Reduce the 64 bit key to 56 bit
 	private static void permuteKey64(byte[] PC1, byte[] keyInBin) {
 		for(int i = 0; i < 56; i++) {
@@ -308,6 +311,58 @@ public class DESalgo {
 			}
 	}	
 
+	//S-boxes
+	public static void S(int a) {
+		byte row, count = 3;
+		int col = 0;
+		int x = msgE[a][0]; 
+		int y = msgE[a][5];
+		
+		if(x == 0 && y == 0)
+			row = 0;
+		else if(x == 0 && y == 1)
+			row = 1;
+		else if(x == 1 && y == 0)
+			row = 2;
+		else 
+			row = 3;
+		
+		for(int i = 1; i < 5; i++) {
+			col = (int) (col + msgE[a][i] * Math.pow(2,count--));
+		}
+		
+		int temp = row * 16 + col;
+		//System.out.println(temp);
+		int temp1 = SBox[a][temp]; 
+		
+		//System.out.println(temp1);
+		
+	}
+	
+	//E bit selection table
+	public static void selectE32(int x) {
+		for(int i = 0; i < 48; i++) {
+			byte temp = E[i];
+			msgE[x][i] = msgIPR[x][temp-1];
+			System.out.print(msgE[x][i] + " ");
+		}
+	}
+	
+	//Split the message from IP into Ln and Rn
+	public static void splitMsgIP() {
+		for(int i = 0; i < 16; i++){
+			for(int j = 0; j < 48; j++){
+				if(msgE[i][j] == 0 && keyPC2[i][j] == 0)
+					msgE[i][j] = 0;
+				else 
+					msgE[i][j] = 1;
+				System.out.print(msgE[i][j] + " ");
+			}
+			//S(i);
+			System.out.println();
+		}
+	}
+	
 	public static void main(String[] args) {
 		
 		TextIO.putln("DES Algorithm Implementation\n");
@@ -316,7 +371,6 @@ public class DESalgo {
 		msg = getInput("message");
 		key = getInput("key");
 		
-
 		toBinary(msg);
 		System.arraycopy(alias, 0, msgInBin, 0, alias.length);
 		count = 0;
@@ -332,10 +386,11 @@ public class DESalgo {
 		for(int i = 0; i < 64; i++){
     		System.out.print(keyInBin[i] + " ");
     	}
-		System.out.println();
+		System.out.println();*/
 		for(int i = 0; i < 64; i++){
-    		System.out.print(msgIP[i] + " ");
-    	}
+    			System.out.print(msgIP[i] + " ");
+    		}
+		/*
 		for(int i = 0; i < 56; i++) {
 			System.out.print(keyPC1[i] + " ");
 		}*/
@@ -378,14 +433,25 @@ public class DESalgo {
 		System.out.println();
 		permuteKey48();
 		for(int j = 0; j < 16; j++) {
-			System.out.print("K" + j+1 + "\t");
+			System.out.print("K" + (j+1) + "\t");
 			for(int k = 0; k < 48; k++) {
 				System.out.print(keyPC2[j][k]);
 			}
 			System.out.println();
 		}
 		
+		for(int j = 0; j < 32; j++){
+			//msgIPL[0][j] = msgIP[j];
+			msgIPR[0][j] = msgIP[j+32];
+			System.out.print(msgIPR[0][j] + " ");
+		}
+		System.out.println();
+		//splitMsgIP();
+		selectE32(0);
+		System.out.println();
+		splitMsgIP();
+		S(0);
+		
 	} //end of main
 	
 }//end of class DESalgo
-
