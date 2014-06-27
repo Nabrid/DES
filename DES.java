@@ -166,7 +166,395 @@ public class DESalgo {
         22, 11, 4,  25
     };
     
-    public static void main(String[] args) {
-    
-    }
+  	public static byte[] msgInBin = new byte[64];
+	public static byte[] keyInBin = new byte[64];
+	public static byte[] alias = new byte[64];
+	public static byte[] keyPC1 = new byte[56];
+	public static byte[] msgIP = new byte[64];
+	public static byte[][][] subKey = new byte[2][17][28]; 
+	public static byte[][] keysCD = new byte[16][56];
+	public static byte[][] keyPC2 = new byte[16][48];
+	public static byte[] msgE = new byte[48];
+	public static byte count=0;
+		
+	//Reduce the 64 bit key to 56 bit
+	private static void permuteKey64(byte[] PC1, byte[] keyInBin) {
+		for(int i = 0; i < 56; i++) {
+			byte temp = PC1[i];
+			keyPC1[i] = keyInBin[temp-1];
+		}
+	}
+	
+	//Reshuffle the bits in data block using Initial Permutation
+	private static void permuteMsg64(byte[] IP, byte[] msgInBin) {
+		for(int i = 0; i < 64; i++) {
+			byte temp = IP[i];
+			msgIP[i] = msgInBin[temp-1];
+		}
+	}
+	
+	//Creates an array for the binary values
+	private static void assignValues(String bin) {
+		int i = 0;
+		char ch;
+		String str;
+		
+		while(i < bin.length()) {
+			ch = bin.charAt(i++);
+			str = Character.toString(ch);
+			byte dec = Byte.parseByte(str);
+			alias[count++] = dec;
+		} 
+	}
+	
+	//Converts the hex characters to corresponding binary digits
+	private static void toBinary(String hex) {
+		int i = 0;
+		char ch;
+		String str;
+		hex = hex.toLowerCase();
+		
+		while(i<hex.length()) {
+			ch = hex.charAt(i++);
+			str = Character.toString(ch);
+			int decimal = Integer.parseInt(str,16);
+			String binary = Integer.toBinaryString(0x10 | decimal).substring(1);
+			assignValues(binary);
+		}	
+	}
+	
+	//Checks if the string consists ONLY of valid hex characters
+	 
+	private static boolean isHex(String hex) {
+		int i = 0;
+		char test;
+		
+		while(i < hex.length()){
+			test=hex.charAt(i++);
+			if(!((test >= '0' && test <= '9') || (test >= 'a' && test <= 'f') 
+					||(test >= 'A'&& test <= 'F')))
+				return false;
+		}
+		return true;
+	} 
+	
+	//Gets an input from the user
+	 
+	private static String getInput(String a) {
+		String b;
+		boolean result;
+		
+		Scanner test = new Scanner(System.in);
+		System.out.print("Enter the " + a + " (16 Hex digits)\t");
+		b  = test.next();
+		result = isHex(b);
+		
+		while(result == false || b.length()!=16) {
+			System.out.print("Invalid !!! Re-enter the " + a + "\t");
+			b  = test.next();
+			result = isHex(b);			
+		}
+		return b;
+	}
+		
+	//Rotations of the keys
+	private static void rotKeys() {
+		
+		for(int i = 0; i < 2; i++) {
+			for(int j = 1; j < 17; j++) {
+				byte temp = 0, temp1 = 0, temp2 = 0;
+				for(int k = 0; k < 27; k++) {
+					if(rotations[j-1] == 1){
+						if(k == 0) {
+							temp = subKey[i][j-1][0];
+						}
+						subKey[i][j][k] = subKey[i][j-1][k+1];
+						if(k == 26) {
+							subKey[i][j][27] = temp;
+						}
+					}
+					else{
+						if(k == 0) {
+							temp1 = subKey[i][j-1][0];
+							temp2 = subKey[i][j-1][1];
+						}
+						if(k != 26)
+							subKey[i][j][k] = subKey[i][j-1][k+2];
+						else {
+							subKey[i][j][26] = temp1;
+							subKey[i][j][27] = temp2;
+						}							
+					}
+				}
+			}
+		}
+	}
+	
+	//Reduce the keys to 48 bits
+	public static void permuteKey48() {
+		for(int i = 0; i < 16; i++)
+			for(int j = 0; j < 48; j++) {
+				byte temp = PC2[j];
+				keyPC2[i][j] = keysCD[i][temp-1];
+			}
+	}
+	
+	//S-boxes
+	public static void S(int cnt, byte[] smp) {
+		int row, cnt1 = 3;
+		int col = 0;
+		int x = smp[0]; 
+		int y = smp[5];
+		
+		if(x == 0 && y == 0)
+			row = 0;
+		else if(x == 0 && y == 1)
+			row = 1;
+		else if(x == 1 && y == 0)
+			row = 2;
+		else 
+			row = 3;
+		
+		for(int i = 1; i < 5; i++) {
+			col = (int) (col + smp[i] * Math.pow(2,cnt1--));
+		}
+		
+		for(int i = 0; i < 6; i++) {
+			System.out.print(smp[i]);
+		}
+		System.out.print("\t" + row + "\t" + col + "\t");
+		
+		int temp = row * 16 + col;
+		//System.out.print(temp + " ");
+		int temp1;
+		temp1 = SBox[cnt][temp]; 
+		System.out.print(temp1 + "\t");
+		
+		String temp2 = Integer.toBinaryString(0x10 | temp1).substring(1);
+		System.out.print(temp2);
+		System.out.println();
+		
+		String var;
+		char foo;
+		while(++cnt1 < 4) {
+			foo = temp2.charAt(cnt1);
+			var = Character.toString(foo);
+			byte dec = Byte.parseByte(var);
+			msgIP[count+32] = dec;
+			count++;
+		}
+	}
+	
+	//Permutation P table
+	public static void permuteP() {
+		for(int i = 0; i < 32; i++) {
+			byte temp = P[i];
+			alias[i+32] = msgIP[temp-1+32];	//Storing the permuted value temporarily in alias[]
+			if(i % 4 == 0)
+				System.out.print(" ");
+			System.out.print(alias[i+32]);
+		}
+		System.arraycopy(alias, 32, msgIP, 32, 32);
+	}
+	
+	//E bit selection table
+	public static void selectE32(int inc) {
+		//System.out.print("E ");
+		for(int i = 0; i < 48; i++) {
+			byte temp = E[i];
+			msgE[i] = msgIP[temp-1+32];
+			//System.out.print(msgE[i]);
+		}
+		xorMsgIP(inc);
+	}
+	
+	//XOR key and bits obtained from E bit selection table
+	public static void xorMsgIP(int inc) {
+		byte[] samp = new byte[6];
+		
+		System.arraycopy(msgIP, 32, alias, 0, 32);
+		
+		//System.out.println();
+		System.out.print("L[" + inc + "]\t");
+		for(int i = 0; i < 32; i++) {
+			if(i % 4 == 0)
+				System.out.print(" ");
+			System.out.print(msgIP[i]);
+		}
+		
+		System.out.println();
+		System.out.print("R[" + inc + "]\t");
+		for(int i = 32; i < 64; i++) {
+			if(i % 4 == 0)
+				System.out.print(" ");
+			System.out.print(msgIP[i]);
+		}
+		
+		System.out.println();
+		System.out.println();
+		System.out.println("Round " + (inc+1));
+		
+		System.out.print("E\t");
+		for(int i = 0; i < 48; i++) {
+			if(i % 6 == 0)
+				System.out.print(" ");
+			System.out.print(msgE[i]);
+		}
+		
+		System.out.println();
+		System.out.print("K[" + (inc+1) + "]\t");
+		for(int i = 0; i < 48; i++) {
+			if(i % 6 == 0)
+				System.out.print(" ");
+			System.out.print(keyPC2[inc][i]);
+		}
+			
+		System.out.println();
+			count = 0;
+			int cnt = 0;
+			System.out.print("XOR\t");
+			for(int j = 0; j < 48; j++){
+				if((msgE[j] == 0 && keyPC2[inc][j] == 0) || (msgE[j] == 1 && keyPC2[inc][j] == 1))
+					msgE[j] = 0;
+				else 
+					msgE[j] = 1;
+				if(j % 6 == 0)
+					System.out.print(" ");
+				System.out.print(msgE[j]);
+			}
+			
+			System.out.println();
+			System.out.println();
+			System.out.println("Sbox");
+			while(cnt < 8) {
+				System.arraycopy(msgE, cnt * 6, samp, 0, 6);
+				S(cnt, samp);
+				cnt++;
+			}
+			
+			System.out.println();
+			System.out.print("P\t");
+			permuteP();
+			for(int i = 0; i < 32; i++){
+				if((msgIP[i] == 0 && msgIP[i+32] == 0) || (msgIP[i] == 1 && msgIP[i+32] == 1))
+					msgIP[i+32] = 0;
+				else 
+					msgIP[i+32] = 1;
+			}
+			System.arraycopy(alias, 0, msgIP, 0, 32);
+	}
+	
+	public static void permuteFP() {
+		for(int i = 0; i < 64; i++) {
+			byte temp = FP[i];
+			msgInBin[i] = msgIP[temp-1];
+			//System.out.print(msgInBin[i]);
+		}
+	}
+	public static void main(String[] args) {
+		
+		System.out.println("DES Algorithm Implementation\n");
+		
+		String msg, key;
+		msg = getInput("message");
+		key = getInput("key");
+		
+		toBinary(msg);
+		System.arraycopy(alias, 0, msgInBin, 0, alias.length);
+		
+		count = 0;
+		toBinary(key);
+		System.arraycopy(alias, 0, keyInBin, 0, alias.length);
+		
+		permuteKey64(PC1, keyInBin);
+		permuteMsg64(IP, msgInBin);
+		
+		System.out.println();
+		System.out.print("Input Bits : ");
+		for(int i = 0; i < 64; i++) {
+			if(i % 8 == 0)
+				System.out.print(" ");
+    		System.out.print(msgInBin[i]);
+    	}
+		
+		System.out.println();
+		System.out.print("Key Bits : ");
+		for(int i = 0; i < 64; i++) {
+			if(i % 8 == 0)
+				System.out.print(" ");
+    		System.out.print(keyInBin[i]);
+    	}
+		
+		System.out.println();
+		for(int i = 0; i < 28; i++) {
+			subKey[0][0][i] = keyPC1[i];
+			subKey[1][0][i] = keyPC1[i+28];
+		}
+
+		System.out.println();
+		rotKeys();
+		for(int j = 0; j < 17; j++) {
+			System.out.print("CD[" + j + "]\t");
+			for(int i = 0; i < 2; i++) {
+				for(int k = 0; k < 28; k++) {
+					if(k % 7 == 0)
+						System.out.print(" ");
+					System.out.print(subKey[i][j][k]);
+				}
+			}
+			System.out.println();
+		}
+		
+		for(int i = 0; i < 16; i++) {
+			for(int k = 0; k < 56; k++) {
+				int x;
+				x = k % 28;
+				if(k < 28)
+					keysCD[i][k] = subKey[0][i+1][k];
+				else 
+					keysCD[i][k] = subKey[1][i+1][x];
+			}
+		}
+		
+		System.out.println();
+		permuteKey48();
+		for(int j = 0; j < 16; j++) {
+			System.out.print("K" + (j+1) + "\t");
+			for(int k = 0; k < 48; k++) {
+				if(k % 6 == 0)
+					System.out.print(" ");
+				System.out.print(keyPC2[j][k]);
+			}
+			System.out.println();
+		}
+		
+		System.out.println();
+		//count = 0;
+		for(int i = 0; i < 16; i++){
+			selectE32(i);
+			System.out.println();
+			//xorMsgIP();
+		}
+		System.out.println();
+		
+    	System.arraycopy(msgIP, 32, msgIP, 0, 32);
+    	System.arraycopy(alias, 0, msgIP, 32, 32);
+    	
+    	System.out.print("LR[16]\t");
+    	for(int i = 0; i < 64; i++) {
+    		if(i % 8 == 0)
+    			System.out.print(" ");
+    		System.out.print(msgIP[i]);
+    	}
+		
+    	permuteFP();
+    	System.out.println();
+    	System.out.print("Output\t");
+    	for(int i = 0; i < 64; i++) {
+    		if(i % 8 == 0)
+    			System.out.print(" ");
+    		System.out.print(msgInBin[i]);
+    	}	
+		
+	} //end of main
 }
